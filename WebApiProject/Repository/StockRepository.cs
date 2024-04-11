@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WebApiProject.Data;
 using WebApiProject.Dtos.Stock;
+using WebApiProject.helpers;
 using WebApiProject.Interfaces;
 using WebApiProject.Models;
 
@@ -8,9 +9,31 @@ namespace WebApiProject.Repository;
 
 public class StockRepository(ApplicationDbContext dbContext) : IStockRepository
 {
-    public async Task<List<Stock>> GetAllAsync()
+    public async Task<List<Stock>> GetAllAsync(QueryObject query)
     {
-        return  await dbContext.Stocks.Include(c=>c.Comments).ToListAsync();
+        var stocks = dbContext.Stocks.Include(c => c.Comments).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(query.CompanyName))
+        {
+            stocks = stocks.Where(s => s.CompanyName.Contains(query.CompanyName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Symbol))
+        {
+            stocks = stocks.Where(s => s.Symbol.Contains(query.Symbol));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SortBy))
+        {
+            if (query.SortBy.Equals("Symbol", StringComparison.OrdinalIgnoreCase))
+            {
+                stocks = query.IsDecsending ? stocks.OrderByDescending(s => s.Symbol) : stocks.OrderBy(s => s.Symbol);
+            }
+        }
+
+        var skipNumber = (query.PageNumber - 1) * query.PageSize;
+        
+
+        return await stocks.Skip(skipNumber).Take(query.PageSize).ToListAsync();
     }
 
     public async Task<Stock?> GetByIdAsync(int id)
@@ -43,10 +66,11 @@ public class StockRepository(ApplicationDbContext dbContext) : IStockRepository
 
     public async Task<Stock?> DeleteAsync(int id)
     {
-        var stock = await dbContext.Stocks.FirstOrDefaultAsync(x => x.Id == id);
+        var stock = await dbContext.Stocks.Include(s=>s.Comments).FirstOrDefaultAsync(x => x.Id == id);
         if (stock == null)
             return null;
 
+        dbContext.Comments.RemoveRange(stock.Comments);
         dbContext.Stocks.Remove(stock);
         await dbContext.SaveChangesAsync();
         return stock;

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiProject.Data;
 using WebApiProject.Dtos.Stock;
+using WebApiProject.helpers;
 using WebApiProject.Interfaces;
 using WebApiProject.Mappers;
 
@@ -12,12 +13,12 @@ namespace WebApiProject.Controllers;
 public class StockController(ApplicationDbContext dbContext,IStockRepository stockRepository) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] QueryObject query)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
         
-        var stocks = await stockRepository.GetAllAsync();
+        var stocks = await stockRepository.GetAllAsync(query);
         
         var stockDto = stocks.Select(s => s.ToStockDto());
         
