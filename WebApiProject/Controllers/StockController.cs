@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiProject.Data;
@@ -13,6 +14,7 @@ namespace WebApiProject.Controllers;
 public class StockController(ApplicationDbContext dbContext,IStockRepository stockRepository) : ControllerBase
 {
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAll([FromQuery] QueryObject query)
     {
         if (!ModelState.IsValid)
